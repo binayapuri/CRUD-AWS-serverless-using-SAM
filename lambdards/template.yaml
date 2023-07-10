@@ -1,0 +1,95 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  RDS and Lambda
+
+  Sample SAM Template for lambda-rds
+
+Parameters:
+  ENDPOINT:
+    Type: String
+  USERNAME:
+    Type: String
+  PASSWORD:
+    Type: String
+    Default: default_value
+  DBNAME:
+    Type: String
+    Default: default_value
+  PublicSubnet:
+    Type: String
+    Default: default_value
+  InstanceSecurityGroup:
+    Type: String
+    Default: default_value
+
+Globals:
+  Function:
+    Timeout: 120
+    MemorySize: 128
+    Environment:
+      Variables:
+        ENDPOINT: !Sub "${ENDPOINT}"
+        USERNAME: !Sub "${USERNAME}"
+        PASSWORD: !Sub "${PASSWORD}"
+        DBNAME: !Sub "${DBNAME}"
+        
+    Tracing: Active
+  Api:
+    Cors:
+      AllowMethods: "'OPTIONS,POST,GET,DELETE,PUT'"
+      AllowHeaders: "'*'"
+      AllowOrigin: "'*'"
+    TracingEnabled: true
+
+Resources:
+  CRUDFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambdaFunctions/
+      Handler: app.lambda_handler
+      Runtime: python3.10
+      VpcConfig:
+        SubnetIds:
+          - !Sub "${PublicSubnet}"
+        SecurityGroupIds:
+          - !Sub "${InstanceSecurityGroup}"
+      Architectures:
+        - x86_64
+      Events:
+        CRUDGetEvent:
+          Type: Api
+          Properties:
+            Path: /fetch
+            Method: get
+        CRUDPostEvent:
+          Type: Api
+          Properties:
+            Path: /fetch
+            Method: post
+        CRUDDeleteEvent:
+          Type: Api
+          Properties:
+            Path: /fetch/{id}
+            Method: delete
+        CRUDPutEvent:
+          Type: Api
+          Properties:
+            Path: /fetch/{id}
+            Method: put
+        CRUDGetOneEvent:
+          Type: Api
+          Properties:
+            Path: /fetch/{id}
+            Method: get
+
+Outputs:
+  CRUDApi:
+    Description: API Gateway endpoint URL for Prod stage for CRUDFunction
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/fetch/"
+  CRUDFunction:
+    Description: CRUD Lambda Function ARN
+    Value: !GetAtt CRUDFunction.Arn
+  CRUDFunctionIamRole:
+    Description: Implicit IAM Role created for CRUD Function
+    Value: !GetAtt CRUDFunctionRole.Arn
